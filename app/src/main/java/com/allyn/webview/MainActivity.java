@@ -1,31 +1,38 @@
 package com.allyn.webview;
 
+import android.content.Intent;
+import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
 import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.widget.ContentLoadingProgressBar;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
+import android.view.WindowManager;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
 
 public class MainActivity extends AppCompatActivity {
 
-    private MyWebView mWebview;
+    private MyWebView mWebView;
     private ContentLoadingProgressBar mProSchedule;
+    private FrameLayout mFrameLayout;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        mFrameLayout = findViewById(R.id.frameLayout);
         mProSchedule = findViewById(R.id.pro_schedule);
-        mWebview = findViewById(R.id.webview);
-        mWebview.loadUrl("http://www.baidu.com");
+        mWebView = findViewById(R.id.webview);
+        mWebView.loadUrl("https://m.baidu.com/");
         //帮助WebView处理各种通知、请求事件
-        mWebview.setWebViewClient(new WebViewClient() {
+        mWebView.setWebViewClient(new WebViewClient() {
 
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
@@ -45,12 +52,33 @@ public class MainActivity extends AppCompatActivity {
             }
 
             @Override
-            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                return super.shouldOverrideUrlLoading(view, request);
+            public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 //网址处理
+                if (url == null) return false;
+            //外链判断处理
+                try {
+                    if (url.startsWith("weixin://") //微信
+                            || url.startsWith("alipays://") //支付宝
+                            || url.startsWith("mailto://") //邮件
+                            || url.startsWith("tel://")//电话
+                            || url.startsWith("baiduhaokan://")//百度
+                            || url.startsWith("tbopen://")//百度+
+                            || url.startsWith("youku://")//优酷
+                            || url.startsWith("dianping://")//大众点评
+                        //其他自定义的scheme
+                            ) {
+                        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                        startActivity(intent);
+                        return true;
+                    }
+                } catch (Exception e) { //防止crash (如果手机上没有安装处理某个scheme开头的url的APP, 会导致crash)
+                    return true;//没有安装该app时，返回true，表示拦截自定义链接，但不跳转，避免弹出上面的错误页面
+                }
                 /**
                  * 可对指定网址进行拦截
                  */
+                view.loadUrl(url);
+                return true;
             }
 
             @Override
@@ -72,14 +100,59 @@ public class MainActivity extends AppCompatActivity {
         });
 
         //辅助WebView处理Javascript的对话框，网站图标，网站title，加载进度等
-        mWebview.setWebChromeClient(new WebChromeClient() {
+        mWebView.setWebChromeClient(new WebChromeClient() {
+            //视图View
+            private View mCustomView;
+            // 一个回调接口使用的主机应用程序通知当前页面的自定义视图已被撤职
+            private CustomViewCallback mCustomViewCallback;
+
+            //网页加载进度
             @Override
             public void onProgressChanged(WebView view, int newProgress) {
                 super.onProgressChanged(view, newProgress);
-                //网页加载进度
                 if (newProgress < 100) {
                     mProSchedule.setProgress(newProgress);
                 }
+            }
+
+            //网页进入全屏模式监听
+            @Override
+            public void onShowCustomView(View view, CustomViewCallback callback) {
+                super.onShowCustomView(view, callback);
+                if (mCustomView != null) {
+                    callback.onCustomViewHidden();
+                    return;
+                }
+                //赋值，关闭时需要调用
+                mCustomView = view;
+                // 将video放到FrameLayout中
+                mFrameLayout.addView(mCustomView);
+                //  退出全屏模式时释放需要调用，这里先赋值
+                mCustomViewCallback = callback;
+                // 设置webView隐藏
+                mWebView.setVisibility(View.GONE);
+                //切换至横屏
+                setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+            }
+
+            //网页退出全屏模式监听
+            @Override
+            public void onHideCustomView() {
+                //显示竖屏时候的webview
+                mWebView.setVisibility(View.VISIBLE);
+                if (mCustomView == null) {
+                    return;
+                }
+                //隐藏
+                mCustomView.setVisibility(View.GONE);
+                //从当前视图中移除
+                mFrameLayout.removeView(mCustomView);
+                //释放自定义视图
+                mCustomViewCallback.onCustomViewHidden();
+                mCustomView = null;
+                //切换至竖屏
+                setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+                super.onHideCustomView();
             }
         });
 
@@ -87,25 +160,74 @@ public class MainActivity extends AppCompatActivity {
 
     //后退
     public void clickReturn(View view) {
-        if (mWebview.canGoBack()) {
-            mWebview.goBack();
+        if (mWebView.canGoBack()) {
+            mWebView.goBack();
         }
     }
 
     //前进
     public void clickAhead(View view) {
-        if (mWebview.canGoForward()) {
-            mWebview.goForward();
+        if (mWebView.canGoForward()) {
+            mWebView.goForward();
         }
     }
 
     //刷新
     public void clickReload(View view) {
-        mWebview.reload();
+        mWebView.reload();
     }
 
     //暂停
     public void clickStop(View view) {
-        mWebview.stopLoading();
+        mWebView.stopLoading();
+    }
+
+    //屏幕旋转监听
+    @Override
+    public void onConfigurationChanged(Configuration config) {
+        super.onConfigurationChanged(config);
+        switch (config.orientation) {
+            //竖屏方向
+            case Configuration.ORIENTATION_LANDSCAPE:
+                //设置全屏
+                getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN);
+                getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+                break;
+            //横屏方向
+            case Configuration.ORIENTATION_PORTRAIT:
+                //关闭全屏
+                getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+                getWindow().addFlags(WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN);
+                break;
+        }
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        mWebView.onPause();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        mWebView.onResume();
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (mWebView.canGoBack()) {
+            mWebView.goBack();
+            return;
+        } else {
+            finish();
+        }
+        super.onBackPressed();
+    }
+
+    @Override
+    public void onDestroy() {
+        mWebView.destroy();
+        super.onDestroy();
     }
 }

@@ -1,6 +1,7 @@
 package com.allyn.webview;
 
 import android.content.Context;
+import android.os.Build;
 import android.util.AttributeSet;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -17,44 +18,59 @@ public class MyWebView extends WebView {
 
     public MyWebView(Context context, AttributeSet attrs) {
         super(context, attrs);
+        init();
     }
 
     public MyWebView(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-        init();
     }
 
     private void init() {
-        //基本配置
-        WebSettings webSettings = getSettings();
-        //支持缩放，默认为true。
-        webSettings.setSupportZoom(false);
-        //调整图片至适合webview的大小
-        webSettings.setUseWideViewPort(true);
-        // 缩放至屏幕的大小
-        webSettings.setLoadWithOverviewMode(true);
-        //设置默认编码
-        webSettings.setDefaultTextEncodingName("utf-8");
-        ////设置自动加载图片
-        webSettings.setLoadsImagesAutomatically(true);
-
-        //多窗口
-        webSettings.supportMultipleWindows();
-        //获取触摸焦点
+        WebSettings mSettings = getSettings();
+        // 支持获取手势焦点
         requestFocusFromTouch();
-        //允许访问文件
-        webSettings.setAllowFileAccess(true);
-        //开启javascript
-        webSettings.setJavaScriptEnabled(true);
-        //支持通过JS打开新窗口
-        webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
-        //提高渲染的优先级
-        webSettings.setRenderPriority(WebSettings.RenderPriority.HIGH);
-        //支持内容重新布局
-        webSettings.setLayoutAlgorithm(WebSettings.LayoutAlgorithm.SINGLE_COLUMN);
-        //关闭webview中缓存
-        webSettings.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
-
+        setHorizontalFadingEdgeEnabled(true);
+        setVerticalFadingEdgeEnabled(false);
+        setVerticalScrollBarEnabled(false);
+        // 支持JS
+        mSettings.setJavaScriptEnabled(true);
+        mSettings.setJavaScriptCanOpenWindowsAutomatically(true);
+        mSettings.setBuiltInZoomControls(true);
+        mSettings.setDisplayZoomControls(true);
+        mSettings.setLoadWithOverviewMode(true);
+        // 支持插件
+        mSettings.setPluginState(WebSettings.PluginState.ON);
+        mSettings.setRenderPriority(WebSettings.RenderPriority.HIGH);
+        // 自适应屏幕
+        mSettings.setUseWideViewPort(true);
+        mSettings.setLoadWithOverviewMode(true);
+        // 支持缩放
+        mSettings.setSupportZoom(false);//就是这个属性把我搞惨了，
+        // 隐藏原声缩放控件
+        mSettings.setDisplayZoomControls(false);
+        // 支持内容重新布局
+        mSettings.setLayoutAlgorithm(WebSettings.LayoutAlgorithm.SINGLE_COLUMN);
+        mSettings.supportMultipleWindows();
+        mSettings.setSupportMultipleWindows(true);
+        // 设置缓存模式
+        mSettings.setDomStorageEnabled(true);
+        mSettings.setDatabaseEnabled(true);
+        mSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        mSettings.setAppCacheEnabled(true);
+        mSettings.setAppCachePath(getContext().getCacheDir().getAbsolutePath());
+        // 设置可访问文件
+        mSettings.setAllowFileAccess(true);
+        mSettings.setNeedInitialFocus(true);
+        mSettings.setBlockNetworkImage(false);
+        // 支持自定加载图片
+        if (Build.VERSION.SDK_INT >= 19) {
+            mSettings.setLoadsImagesAutomatically(true);
+        } else {
+            mSettings.setLoadsImagesAutomatically(false);
+        }
+        mSettings.setNeedInitialFocus(true);
+        // 设定编码格式
+        mSettings.setDefaultTextEncodingName("UTF-8");
     }
 
 }
