@@ -3,6 +3,9 @@ package com.allyn.webview;
 import android.content.Context;
 import android.os.Build;
 import android.util.AttributeSet;
+import android.view.MotionEvent;
+import android.view.View;
+import android.webkit.URLUtil;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 
@@ -12,6 +15,9 @@ import android.webkit.WebView;
 
 public class MyWebView extends WebView {
 
+    private onSelectItemListener mOnSelectItemListener;
+    private int touchX = 0, touchY = 0;
+
     public MyWebView(Context context) {
         super(context);
     }
@@ -19,6 +25,7 @@ public class MyWebView extends WebView {
     public MyWebView(Context context, AttributeSet attrs) {
         super(context, attrs);
         init();
+        longClick();
     }
 
     public MyWebView(Context context, AttributeSet attrs, int defStyleAttr) {
@@ -73,4 +80,57 @@ public class MyWebView extends WebView {
         mSettings.setDefaultTextEncodingName("UTF-8");
     }
 
+    private void longClick() {
+        setOnLongClickListener(new OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                HitTestResult result = getHitTestResult();
+                if (null == result)
+                    return false;
+                int type = result.getType();
+                String extra = result.getExtra();
+                switch (type) {
+                    case HitTestResult.PHONE_TYPE: // 处理拨号
+                        break;
+                    case HitTestResult.EMAIL_TYPE: // 处理Email
+                        break;
+                    case HitTestResult.GEO_TYPE: // 　地图类型
+                        break;
+                    case HitTestResult.SRC_ANCHOR_TYPE: // 超链接
+                        if (mOnSelectItemListener != null && extra != null && URLUtil.isValidUrl(extra)) {
+                            mOnSelectItemListener.onLinkSelected(touchX, touchY, result.getType(), extra);
+                        }
+                        return true;
+                    case HitTestResult.SRC_IMAGE_ANCHOR_TYPE: // 带有链接的图片类型
+                    case HitTestResult.IMAGE_TYPE: // 处理长按图片的菜单项
+                        if (mOnSelectItemListener != null && extra != null && URLUtil.isValidUrl(extra)) {
+                            mOnSelectItemListener.onImgSelected(touchX, touchY, result.getType(), extra);
+                        }
+                        return true;
+                    case HitTestResult.UNKNOWN_TYPE: //未知
+                        break;
+                    case HitTestResult.EDIT_TEXT_TYPE://文字
+                        break;
+                }
+                return true;
+            }
+        });
+    }
+
+    @Override
+    public boolean onInterceptTouchEvent(MotionEvent event) {
+        touchX = (int) event.getX();
+        touchY = (int) event.getY();
+        return super.onInterceptTouchEvent(event);
+    }
+
+    public void setOnSelectItemListener(onSelectItemListener onSelectItemListener) {
+        mOnSelectItemListener = onSelectItemListener;
+    }
+
+    public interface onSelectItemListener {
+        void onImgSelected(int x, int y, int type, String extra);
+
+        void onLinkSelected(int x, int y, int type, String extra);
+    }
 }

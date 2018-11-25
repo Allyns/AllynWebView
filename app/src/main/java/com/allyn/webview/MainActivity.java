@@ -3,6 +3,7 @@ package com.allyn.webview;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.ClipData;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
@@ -11,17 +12,18 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.widget.ContentLoadingProgressBar;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.view.WindowManager;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
-
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
+import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -171,7 +173,7 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
-                uploadMessage=filePathCallback;
+                uploadMessage = filePathCallback;
                 //网页文件上传回调
                 //这里打开图库
                 Intent i = new Intent(Intent.ACTION_GET_CONTENT);
@@ -179,6 +181,50 @@ public class MainActivity extends AppCompatActivity {
                 i.setType("image/*");
                 startActivityForResult(Intent.createChooser(i, "Image Chooser"), REQUEST_CODE_CHOOSE);
                 return true;
+            }
+        });
+
+        mWebView.setOnSelectItemListener(new MyWebView.onSelectItemListener() {
+            @Override
+            public void onImgSelected(int x, int y, int type, String extra) {
+                String[] menus = new String[]{"保存图片", "预览图片", "复制图片链接", "分享图片"};
+                new AlertDialog.Builder(MainActivity.this)
+                        .setItems(menus, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                dialog.dismiss();
+                                switch (which) {
+                                    case 0:
+                                        break;
+                                    case 1:
+                                        break;
+                                    case 2:
+                                        Toast.makeText(MainActivity.this, "复制图片链接点击了", Toast.LENGTH_LONG).show();
+                                        break;
+                                    case 3:
+                                        break;
+                                }
+                            }
+                        }).show();
+            }
+
+            @Override
+            public void onLinkSelected(int x, int y, int type, String extra) {
+                String[] menus = new String[]{"复制链接地址", "新窗口打开"};
+                new AlertDialog.Builder(MainActivity.this)
+                        .setItems(menus, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                dialog.dismiss();
+                                switch (which) {
+                                    case 0:
+                                        break;
+                                    case 1:
+                                        Toast.makeText(MainActivity.this, "新窗口打开点击了", Toast.LENGTH_LONG).show();
+                                        break;
+                                }
+                            }
+                        }).show();
             }
         });
     }
