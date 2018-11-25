@@ -1,17 +1,23 @@
 package com.allyn.webview;
 
+import android.annotation.TargetApi;
+import android.app.Activity;
+import android.content.ClipData;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.widget.ContentLoadingProgressBar;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.view.WindowManager;
+import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
+
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -22,6 +28,8 @@ public class MainActivity extends AppCompatActivity {
     private MyWebView mWebView;
     private ContentLoadingProgressBar mProSchedule;
     private FrameLayout mFrameLayout;
+    private static final int REQUEST_CODE_CHOOSE = 23;
+    private ValueCallback<Uri[]> uploadMessage;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -31,6 +39,11 @@ public class MainActivity extends AppCompatActivity {
         mProSchedule = findViewById(R.id.pro_schedule);
         mWebView = findViewById(R.id.webview);
         mWebView.loadUrl("https://m.baidu.com/");
+        setClient();
+
+    }
+
+    private void setClient() {
         //帮助WebView处理各种通知、请求事件
         mWebView.setWebViewClient(new WebViewClient() {
 
@@ -55,16 +68,17 @@ public class MainActivity extends AppCompatActivity {
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 //网址处理
                 if (url == null) return false;
-            //外链判断处理
+                //外链判断处理
                 try {
-                    if (url.startsWith("weixin://") //微信
-                            || url.startsWith("alipays://") //支付宝
-                            || url.startsWith("mailto://") //邮件
-                            || url.startsWith("tel://")//电话
-                            || url.startsWith("baiduhaokan://")//百度
-                            || url.startsWith("tbopen://")//百度+
-                            || url.startsWith("youku://")//优酷
-                            || url.startsWith("dianping://")//大众点评
+                    if (url.startsWith("weixin://")
+                            || url.startsWith("alipays://")
+                            || url.startsWith("mailto://")
+                            || url.startsWith("tel://")
+                            || url.startsWith("baiduhaokan://")
+                            || url.startsWith("baiduboxapp://")
+                            || url.startsWith("tbopen://")
+                            || url.startsWith("youku://")
+                            || url.startsWith("dianping://")
                         //其他自定义的scheme
                             ) {
                         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
@@ -154,8 +168,19 @@ public class MainActivity extends AppCompatActivity {
                 setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
                 super.onHideCustomView();
             }
-        });
 
+            @Override
+            public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
+                uploadMessage=filePathCallback;
+                //网页文件上传回调
+                //这里打开图库
+                Intent i = new Intent(Intent.ACTION_GET_CONTENT);
+                i.addCategory(Intent.CATEGORY_OPENABLE);
+                i.setType("image/*");
+                startActivityForResult(Intent.createChooser(i, "Image Chooser"), REQUEST_CODE_CHOOSE);
+                return true;
+            }
+        });
     }
 
     //后退
@@ -200,6 +225,41 @@ public class MainActivity extends AppCompatActivity {
                 getWindow().addFlags(WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN);
                 break;
         }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        //网页上传图片回调
+        if (requestCode == REQUEST_CODE_CHOOSE) {
+            //图片选择后返回图标，通过uploadMessage将图片传给网页
+            if (uploadMessage != null) {
+                onActivityResultAboveL(resultCode, data);
+            }
+        }
+    }
+
+    //处理网页回调
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+    private void onActivityResultAboveL(int resultCode, Intent intent) {
+        Uri[] results = null;
+        if (resultCode == Activity.RESULT_OK) {
+            if (intent != null) {
+                String dataString = intent.getDataString();
+                ClipData clipData = intent.getClipData();
+                if (clipData != null) {
+                    results = new Uri[clipData.getItemCount()];
+                    for (int i = 0; i < clipData.getItemCount(); i++) {
+                        ClipData.Item item = clipData.getItemAt(i);
+                        results[i] = item.getUri();
+                    }
+                }
+                if (dataString != null)
+                    results = new Uri[]{Uri.parse(dataString)};
+            }
+        }
+        uploadMessage.onReceiveValue(results);
+        uploadMessage = null;
     }
 
     @Override
