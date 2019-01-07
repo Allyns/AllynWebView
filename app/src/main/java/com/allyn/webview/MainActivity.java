@@ -11,6 +11,7 @@ import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.support.annotation.Nullable;
 import android.support.v4.widget.ContentLoadingProgressBar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -20,10 +21,14 @@ import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.Toast;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -37,12 +42,12 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        AdBlocker.init(this);
         mFrameLayout = findViewById(R.id.frameLayout);
         mProSchedule = findViewById(R.id.pro_schedule);
         mWebView = findViewById(R.id.webview);
-        mWebView.loadUrl("https://m.baidu.com/");
+        mWebView.loadUrl("https://m.80txt.com/14448/22578389.html");
         setClient();
-
     }
 
     private void setClient() {
@@ -95,6 +100,22 @@ public class MainActivity extends AppCompatActivity {
                  */
                 view.loadUrl(url);
                 return true;
+            }
+
+            private Map<String, Boolean> loadedUrls = new HashMap<>();
+
+            @Nullable
+            @Override
+            public WebResourceResponse shouldInterceptRequest(WebView view, String url) {
+                boolean ad;
+                if (!loadedUrls.containsKey(url)) {
+                    ad = AdBlocker.isAd(url);
+                    loadedUrls.put(url, ad);
+                } else {
+                    ad = loadedUrls.get(url);
+                }
+                return ad ? AdBlocker.createEmptyResource() :
+                        super.shouldInterceptRequest(view, url);
             }
 
             @Override
